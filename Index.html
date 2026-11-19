@@ -330,7 +330,7 @@
 
                     if (isHoliday) {
                         const holTag = document.createElement("span");
-                        holTag.className = "text-[8px] sm:text-[10px] md:text-[11px] font-medium leading-tight text-left sm:text-right px-1 rounded bg-white/70 py-0.5 line-clamp-2 w-full sm:w-auto";
+                        holTag.className = "text-[8px] sm:text-[10px] md:text-[11px] font-medium leading-tight text-left sm:text-right px-1 rounded bg-white/70 py-0.5 break-words min-w-0 w-full sm:w-auto";
                         holTag.style.color = theme.holText;
                         holTag.innerText = holidayName;
                         topRow.appendChild(holTag);
@@ -341,7 +341,7 @@
                         topRow.appendChild(workTag);
                     } else if (noteName) {
                         const noteTag = document.createElement("span");
-                        noteTag.className = "text-[8px] sm:text-[10px] md:text-[11px] font-medium leading-tight text-left sm:text-right px-1 rounded bg-slate-100 text-slate-500 py-0.5 line-clamp-2 w-full sm:w-auto";
+                        noteTag.className = "text-[8px] sm:text-[10px] md:text-[11px] font-medium leading-tight text-left sm:text-right px-1 rounded bg-slate-100 text-slate-500 py-0.5 break-words min-w-0 w-full sm:w-auto";
                         noteTag.innerText = noteName;
                         topRow.appendChild(noteTag);
                     }
