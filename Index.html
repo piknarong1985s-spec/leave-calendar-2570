@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ปฏิทินจองวันลา พ.ศ. 2570</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Mitr:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #F8FAF9;
+            color: #4A4A4A;
+            transition: background-color 0.4s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-header {
+            font-family: 'Mitr', sans-serif;
+        }
+        .theme-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .day-cell {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        @media (hover: hover) {
+            .day-cell:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+            }
+        }
+        ::-webkit-scrollbar {
+            width: 3px;
+            height: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ffb6c1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-2 sm:p-4 md:p-6 flex flex-col items-center justify-start sm:justify-center overflow-x-hidden">
+
+    <div class="w-full max-w-5xl mx-auto">
+        <!-- Header Control Bar -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4 mb-3 sm:mb-5 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-md shadow-sm border border-pink-100">
+            <div class="flex items-center justify-between w-full sm:w-auto gap-2">
+                <button id="prevMonth" class="flex-1 sm:flex-initial justify-center px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl bg-white shadow-xs border border-pink-200 text-pink-600 hover:bg-pink-50 active:scale-95 transition font-medium flex items-center gap-1 text-xs sm:text-sm">
+                    🌸 เดือนก่อนหน้า
+                </button>
+                <button id="nextMonth" class="flex-1 sm:flex-initial justify-center px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl bg-white shadow-xs border border-pink-200 text-pink-600 hover:bg-pink-50 active:scale-95 transition font-medium flex items-center gap-1 text-xs sm:text-sm">
+                    เดือนถัดไป 🌸
+                </button>
+            </div>
+
+            <!-- Month Dropdown Selector -->
+            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2">
+                <span class="text-xs text-pink-400 font-medium whitespace-nowrap">✨ เลือกเดือน:</span>
+                <select id="monthSelect" class="flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl bg-pink-50/50 border border-pink-200 text-pink-700 font-medium focus:outline-none focus:ring-2 focus:ring-pink-300 transition text-xs sm:text-sm">
+                    <option value="0">มกราคม (Jan)</option>
+                    <option value="1">กุมภาพันธ์ (Feb)</option>
+                    <option value="2">มีนาคม (Mar)</option>
+                    <option value="3">เมษายน (Apr)</option>
+                    <option value="4">พฤษภาคม (May)</option>
+                    <option value="5">มิถุนายน (Jun)</option>
+                    <option value="6">กรกฎาคม (Jul)</option>
+                    <option value="7">สิงหาคม (Aug)</option>
+                    <option value="8">กันยายน (Sep) </option>
+                    <option value="9">ตุลาคม (Oct)</option>
+                    <option value="10">พฤศจิกายน (Nov)</option>
+                    <option value="11">ธันวาคม (Dec)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Calendar Card -->
+        <div id="calendarCard" class="theme-card rounded-2xl sm:rounded-3xl border-2 p-2.5 sm:p-6 md:p-8 bg-white overflow-hidden">
+            <div class="flex justify-between items-baseline mb-3 sm:mb-6 border-b pb-2.5 sm:pb-4 border-pink-100 px-1">
+                <h1 id="monthTitle" class="font-header text-2xl sm:text-4xl md:text-5xl font-semibold tracking-wide" style="color: #333333;">
+                    มกราคม
+                </h1>
+                <span class="font-header text-2xl sm:text-4xl md:text-5xl font-bold opacity-80" style="color: #333333;">
+                    2570 ✨
+                </span>
+            </div>
+
+            <!-- Days Headers -->
+            <div id="daysHeaderGrid" class="grid grid-cols-7 gap-1 sm:gap-2 md:gap-2.5 mb-1.5 sm:mb-3 text-center"></div>
+
+            <!-- Dates Grid -->
+            <div id="calendarGrid" class="grid grid-cols-7 gap-1 sm:gap-2 md:gap-2.5"></div>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="fixed inset-0 bg-pink-900/30 backdrop-blur-xs flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl transform transition-all scale-100 border-2 border-pink-200">
+            <div class="text-center mb-2">
+                <span class="text-2xl sm:text-3xl">🧸</span>
+                <h3 class="font-header text-lg sm:text-xl font-semibold text-pink-600 mt-1" id="modalDateTitle">จองวันลา</h3>
+                <p class="text-xs text-slate-400">กรอกชื่อพนักงานเพื่อบันทึกการลาจ้า</p>
+            </div>
+            
+            <form id="leaveForm" class="space-y-4 mt-4">
+                <input type="hidden" id="selectedDateKey">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อพนักงาน:</label>
+                    <input type="text" id="employeeName" required placeholder="เช่น น้องน้ำหวาน 🐰" 
+                        class="w-full px-4 py-2.5 rounded-2xl border border-pink-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 transition bg-pink-50/30">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" id="closeModalBtn" class="w-1/2 py-2.5 rounded-2xl bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 active:scale-95 transition">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="w-1/2 py-2.5 rounded-2xl bg-pink-400 text-white text-sm font-medium hover:bg-pink-500 active:scale-95 shadow-md transition">
+                        บันทึกเลย 💖
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl transform transition-all scale-100 border-2 border-red-200 text-center">
+            <span class="text-3xl">🗑️</span>
+            <h3 class="font-header text-lg sm:text-xl font-semibold text-slate-700 mt-2">ยืนยันการลบข้อมูล</h3>
+            <p id="deleteConfirmText" class="text-sm text-slate-600 mt-2 leading-relaxed">
+                ต้องการลบวันลาของ <span class="font-semibold text-pink-600">...</span> ใช่หรือไม่?
+            </p>
+            
+            <div class="flex gap-2 mt-5">
+                <button type="button" id="cancelDeleteBtn" class="w-1/2 py-2.5 rounded-2xl bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 active:scale-95 transition">
+                    ยังก่อนจ้า, ยกเลิก
+                </button>
+                <button type="button" id="confirmDeleteBtn" class="w-1/2 py-2.5 rounded-2xl bg-red-400 text-white text-sm font-medium hover:bg-red-500 active:scale-95 shadow-md transition">
+                    ใช่, ลบเลยจ้า
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🛠️ Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyADo8_Y17HVfzyD_pZdLGUw-TeSRsEv87I",
+            authDomain: "lavebooking-63d41.firebaseapp.com",
+            databaseURL: "https://lavebooking-63d41-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "lavebooking-63d41",
+            storageBucket: "lavebooking-63d41.firebasestorage.app",
+            messagingSenderId: "905584193912",
+            appId: "1:905584193912:web:b96aa1e0013b6ff2afd88d",
+            measurementId: "G-ZLFHH62MP5"
+        };
+
+        let db = null;
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.database();
+        } catch (e) {
+            console.warn("Firebase Config Error/Offline Mode:", e);
+        }
+
+        const monthThemes = [
+// 🎨 โทนสีจาก Mineral Color (9 โทน) เดือน ต.ค.-ธ.ค. ใช้โทน 1-3 สลับบทบาทสี
+            { name: "มกราคม", bg1: "#FFF5AF", bg2: "#F1C78A", border: "#F1C78A", cellBorder: "#FBE9C6", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#F7E1D9" },
+            { name: "กุมภาพันธ์", bg1: "#FCF2E3", bg2: "#D6CEE3", border: "#D6CEE3", cellBorder: "#EFEAF4", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#EDBCAA" },
+            { name: "มีนาคม", bg1: "#FFF8B3", bg2: "#D0E3BE", border: "#D0E3BE", cellBorder: "#EAF3DF", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#C2D3E6" },
+            { name: "เมษายน", bg1: "#CCE0D1", bg2: "#C1A7B2", border: "#C1A7B2", cellBorder: "#E3EEE6", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#F6DBBA" },
+            { name: "พฤษภาคม", bg1: "#FFFBD2", bg2: "#88A4A9", border: "#88A4A9", cellBorder: "#EEF3F3", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#F4DBE5", headText: "#FFFFFF" },
+            { name: "มิถุนายน", bg1: "#FBEEE2", bg2: "#F1EFAA", border: "#F1EFAA", cellBorder: "#F7F2DC", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#F9E4A8" },
+            { name: "กรกฎาคม", bg1: "#D1E6DC", bg2: "#F8E7A7", border: "#F8E7A7", cellBorder: "#E8F3EE", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#F4D7C6" },
+            { name: "สิงหาคม", bg1: "#E2D6E7", bg2: "#BE8EAA", border: "#BE8EAA", cellBorder: "#F1EAF4", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#EDBFBF", headText: "#FFFFFF" },
+            { name: "กันยายน", bg1: "#C3E1E5", bg2: "#FDF6AA", border: "#FDF6AA", cellBorder: "#E4F2F4", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#F7E0CA" },
+            { name: "ตุลาคม", bg1: "#F7E1D9", bg2: "#F1C78A", border: "#F1C78A", cellBorder: "#FBEDE7", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#FFF5AF" },
+            { name: "พฤศจิกายน", bg1: "#D6CEE3", bg2: "#EDBCAA", border: "#EDBCAA", cellBorder: "#EBE6F2", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#FCF2E3" },
+            { name: "ธันวาคม", bg1: "#C2D3E6", bg2: "#D0E3BE", border: "#D0E3BE", cellBorder: "#E0E9F3", text: "#444444", holText: "#E53E3E", satSunBg: "#ECECEC", holBg: "#FFF8B3" }
+        ];
+
+        // 🎌 วันหยุดของบริษัท (ตาม PDF) - แสดงสีวันหยุด
+        const thaiHolidays2027 = {
+            "2027-01-01": "วันขึ้นปีใหม่",
+            "2027-02-22": "ชดเชยวันมาฆบูชา",
+            "2027-04-12": "วันหยุดพิเศษเพิ่มเติม",
+            "2027-04-13": "วันสงกรานต์",
+            "2027-04-14": "วันสงกรานต์",
+            "2027-04-15": "วันสงกรานต์",
+            "2027-05-03": "ชดเชยวันแรงงาน",
+            "2027-06-03": "วันเฉลิมพระชนมพรรษา สมเด็จพระนางเจ้าฯ พระบรมราชินี",
+            "2027-07-28": "วันเฉลิมพระชนมพรรษา พระบาทสมเด็จพระเจ้าอยู่หัว (ร.10)",
+            "2027-08-12": "วันแม่แห่งชาติ",
+            "2027-10-13": "วันนวมินทรมหาราช",
+            "2027-12-06": "ชดเชยวันพ่อแห่งชาติ",
+            "2027-12-29": "วันหยุดพิเศษเพิ่มเติม",
+            "2027-12-30": "วันหยุดพิเศษเพิ่มเติม",
+            "2027-12-31": "วันสิ้นปี"
+        };
+
+        // 📌 วันสำคัญที่บริษัทไม่หยุด - แสดงชื่อวันไว้เฉยๆ ไม่ใส่สี ทำงานตามปกติ
+        const noteOnlyDays2027 = {
+            "2027-02-21": "วันมาฆบูชา",
+            "2027-04-06": "วันจักรี",
+            "2027-05-01": "วันแรงงาน",
+            "2027-05-04": "วันฉัตรมงคล",
+            "2027-05-20": "วันวิสาขบูชา",
+            "2027-07-18": "วันอาสาฬหบูชา",
+            "2027-07-19": "วันเข้าพรรษา / ชดเชยวันอาสาฬหบูชา",
+            "2027-10-23": "วันปิยมหาราช",
+            "2027-10-25": "ชดเชยวันปิยมหาราช",
+            "2027-12-05": "วันพ่อแห่งชาติ",
+            "2027-12-10": "วันรัฐธรรมนูญ"
+        };
+
+        // 💼 วันเสาร์ที่เป็นวันทำงาน (ตาม PDF)
+        const workingSaturdays2027 = {
+            "2027-03-13": "Safety Day",
+            "2027-05-15": "Company Trip",
+            "2027-12-11": "Company Party"
+        };
+
+        // 🎤 Morning Talk (ตาม PDF)
+        const morningTalk2027 = {
+            "2027-01-05": "MD",
+            "2027-02-03": "GM",
+            "2027-03-03": "HR & Admin Dept.",
+            "2027-04-06": "Accounting Dept.",
+            "2027-05-05": "Sales Dept.",
+            "2027-06-04": "Purchasing Dept.",
+            "2027-07-02": "QC Dept.",
+            "2027-08-04": "Store Dept.",
+            "2027-09-03": "IT Dept.",
+            "2027-10-05": "QMS",
+            "2027-11-03": "Safety Team",
+            "2027-12-03": "MD"
+        };
+
+        const dayNamesFull = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+        const dayNamesShort = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+        
+        let currentMonth = 0;
+        let globalLeaveData = {};
+        const year = 2027;
+
+        // ตัวแปรเก็บข้อมูลชั่วคราวสำหรับการลบ
+        let pendingDelete = { dateKey: null, firebaseKey: null };
+
+        function renderCalendar(monthIndex) {
+            const theme = monthThemes[monthIndex];
+            document.body.style.background = `linear-gradient(160deg, ${theme.bg1} 0%, ${theme.bg2} 100%)`;
+            document.body.style.backgroundAttachment = "fixed";
+            
+            const card = document.getElementById("calendarCard");
+            card.style.backgroundColor = theme.bg1;
+            card.style.borderColor = theme.border;
+
+            document.getElementById("monthTitle").innerText = theme.name;
+            document.getElementById("monthSelect").value = monthIndex;
+
+            const daysHeaderGrid = document.getElementById("daysHeaderGrid");
+            daysHeaderGrid.innerHTML = "";
+            dayNamesFull.forEach((d, idx) => {
+                const header = document.createElement("div");
+                header.className = "py-1.5 sm:py-2.5 md:py-3 font-header text-xs sm:text-sm md:text-base font-semibold rounded-xl sm:rounded-2xl shadow-xs";
+                // แสดงชื่อย่อบนจอมือถือ และแสดงชื่อเต็มบนจอแท็บเล็ตขึ้นไป
+                header.innerHTML = `<span class="sm:hidden">${dayNamesShort[idx]}</span><span class="hidden sm:inline">${d}</span>`;
+                header.style.color = theme.headText || theme.text;
+                header.style.backgroundColor = (idx === 0 || idx === 6) ? theme.satSunBg : theme.bg2;
+                daysHeaderGrid.appendChild(header);
+            });
+
+            const calendarGrid = document.getElementById("calendarGrid");
+            calendarGrid.innerHTML = "";
+
+            const firstDayIndex = new Date(year, monthIndex, 1).getDay();
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+            for (let i = 0; i < 42; i++) {
+                const dayNumber = i - firstDayIndex + 1;
+                const cell = document.createElement("div");
+                
+                if (i < firstDayIndex || dayNumber > daysInMonth) {
+                    cell.className = "min-h-[68px] sm:min-h-[95px] md:min-h-[115px] p-1 sm:p-2 rounded-xl sm:rounded-2xl bg-white/20 border border-transparent opacity-30 pointer-events-none";
+                } else {
+                    const colIndex = i % 7;
+                    const isSaturday = colIndex === 6;
+                    const isSunday = colIndex === 0;
+                    
+                    const monthStr = String(monthIndex + 1).padStart(2, '0');
+                    const dayStr = String(dayNumber).padStart(2, '0');
+                    const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+                    const isHoliday = thaiHolidays2027.hasOwnProperty(dateKey);
+                    const holidayName = thaiHolidays2027[dateKey];
+                    const isSatWorking = isSaturday && workingSaturdays2027[dateKey];
+                    const noteName = noteOnlyDays2027[dateKey];
+
+                    cell.className = "day-cell min-h-[68px] sm:min-h-[95px] md:min-h-[115px] p-1 sm:p-2 md:p-2.5 rounded-xl sm:rounded-2xl border flex flex-col justify-between cursor-pointer shadow-2xs relative overflow-hidden";
+                    
+                    if (isHoliday) {
+                        cell.style.backgroundColor = theme.holBg;
+                        cell.style.borderColor = theme.border;
+                    } else if (isSatWorking) {
+                        cell.style.backgroundColor = "#FFFFFF";
+                        cell.style.borderColor = "#FCD34D";
+                    } else if (isSunday || isSaturday) {
+                        cell.style.backgroundColor = theme.satSunBg;
+                        cell.style.borderColor = theme.cellBorder;
+                    } else {
+                        cell.style.backgroundColor = "#FFFFFF";
+                        cell.style.borderColor = theme.cellBorder;
+                    }
+
+                    const topRow = document.createElement("div");
+                    topRow.className = "flex flex-col sm:flex-row justify-between items-start gap-0.5";
+
+                    const numSpan = document.createElement("span");
+                    numSpan.className = "font-header text-xs sm:text-base md:text-lg font-semibold px-0.5 leading-none";
+                    numSpan.innerText = dayNumber;
+                    numSpan.style.color = isHoliday ? theme.holText : theme.text;
+                    topRow.appendChild(numSpan);
+
+                    if (isHoliday) {
+                        const holTag = document.createElement("span");
+                        holTag.className = "text-[8px] sm:text-[10px] md:text-[11px] font-medium leading-tight text-left sm:text-right px-1 rounded bg-white/70 py-0.5 line-clamp-2 w-full sm:w-auto";
+                        holTag.style.color = theme.holText;
+                        holTag.innerText = holidayName;
+                        topRow.appendChild(holTag);
+                    } else if (isSatWorking) {
+                        const workTag = document.createElement("span");
+                        workTag.className = "text-[8px] sm:text-[10px] md:text-xs font-medium leading-tight text-center px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold w-full sm:w-auto";
+                        workTag.innerHTML = `<span class="sm:hidden">💼 ทำงาน</span><span class="hidden sm:inline">💼 ${isSatWorking}</span>`;
+                        topRow.appendChild(workTag);
+                    } else if (noteName) {
+                        const noteTag = document.createElement("span");
+                        noteTag.className = "text-[8px] sm:text-[10px] md:text-[11px] font-medium leading-tight text-left sm:text-right px-1 rounded bg-slate-100 text-slate-500 py-0.5 line-clamp-2 w-full sm:w-auto";
+                        noteTag.innerText = noteName;
+                        topRow.appendChild(noteTag);
+                    }
+
+                    cell.appendChild(topRow);
+
+                    // 🎤 Morning Talk
+                    const talkName = morningTalk2027[dateKey];
+                    if (talkName) {
+                        const talkTag = document.createElement("div");
+                        talkTag.className = "mt-0.5 text-[8px] sm:text-[10px] md:text-[11px] font-medium leading-tight px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 break-words";
+                        talkTag.innerHTML = `🎤 <span class="hidden sm:inline">Morning Talk: </span>${talkName}`;
+                        cell.appendChild(talkTag);
+                    }
+
+                    const leaveContainer = document.createElement("div");
+                    leaveContainer.className = "space-y-0.5 sm:space-y-1 mt-1";
+
+                    if (globalLeaveData[dateKey]) {
+                        Object.entries(globalLeaveData[dateKey]).forEach(([firebaseKey, person]) => {
+                            const badge = document.createElement("div");
+                            badge.className = "text-[9px] sm:text-[11px] md:text-xs py-0.5 px-1 sm:px-2 rounded-lg sm:rounded-xl flex items-start justify-between gap-0.5 shadow-2xs font-medium border border-pink-100 bg-pink-50/90";
+                            badge.style.color = "#555555";
+                            
+                            const nameSpan = document.createElement("span");
+                            nameSpan.className = "min-w-0 flex-1 break-words leading-tight py-0.5";
+                            nameSpan.innerText = `🌸 ${person}`;
+                            
+                            const delBtn = document.createElement("button");
+                            delBtn.type = "button";
+                            delBtn.className = "hover:text-red-500 active:text-red-600 shrink-0 text-pink-400 font-bold px-1 text-xs sm:text-sm leading-none";
+                            delBtn.innerHTML = "&times;";
+                            delBtn.onclick = (e) => openDeleteModal(dateKey, firebaseKey, person, e);
+
+                            badge.appendChild(nameSpan);
+                            badge.appendChild(delBtn);
+                            leaveContainer.appendChild(badge);
+                        });
+                    }
+
+                    cell.appendChild(leaveContainer);
+
+                    cell.onclick = (e) => {
+                        if (e.target.tagName !== 'BUTTON') {
+                            openBookingModal(dateKey, dayNumber, theme.name);
+                        }
+                    };
+                }
+
+                calendarGrid.appendChild(cell);
+            }
+        }
+
+        // วาดตารางปฏิทินทันที
+        renderCalendar(currentMonth);
+
+        // ฟัง Real-time Data จาก Firebase
+        if (db) {
+            db.ref("leaveBookings2570").on("value", (snapshot) => {
+                globalLeaveData = snapshot.val() || {};
+                renderCalendar(currentMonth);
+            }, (error) => {
+                console.error("Firebase Read Error:", error);
+            });
+        }
+
+        // จัดการ Modal จองวันลา
+        function openBookingModal(dateKey, dayNum, monthName) {
+            document.getElementById("selectedDateKey").value = dateKey;
+            document.getElementById("modalDateTitle").innerText = `จองวันลาวันที่ ${dayNum} ${monthName} 2570`;
+            document.getElementById("employeeName").value = "";
+            document.getElementById("bookingModal").classList.remove("hidden");
+            setTimeout(() => document.getElementById("employeeName").focus(), 100);
+        }
+
+        document.getElementById("closeModalBtn").onclick = () => {
+            document.getElementById("bookingModal").classList.add("hidden");
+        };
+
+        document.getElementById("leaveForm").onsubmit = (e) => {
+            e.preventDefault();
+            const dateKey = document.getElementById("selectedDateKey").value;
+            const name = document.getElementById("employeeName").value.trim();
+
+            if (name && dateKey) {
+                if (db) {
+                    db.ref(`leaveBookings2570/${dateKey}`).push(name).then(() => {
+                        document.getElementById("bookingModal").classList.add("hidden");
+                    }).catch((error) => {
+                        alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
+                    });
+                } else {
+                    alert("ยังไม่ได้เชื่อมต่อฐานข้อมูล Firebase");
+                }
+            }
+        };
+
+        // จัดการ Modal ยืนยันการลบ
+        function openDeleteModal(dateKey, firebaseKey, personName, event) {
+            event.stopPropagation();
+            pendingDelete = { dateKey, firebaseKey };
+            
+            const confirmText = document.getElementById("deleteConfirmText");
+            confirmText.innerHTML = `ต้องการลบวันลาของ <span class="font-semibold text-pink-600">"${personName}"</span> ใช่หรือไม่?`;
+            
+            document.getElementById("deleteModal").classList.remove("hidden");
+        }
+
+        document.getElementById("cancelDeleteBtn").onclick = () => {
+            document.getElementById("deleteModal").classList.add("hidden");
+            pendingDelete = { dateKey: null, firebaseKey: null };
+        };
+
+        document.getElementById("confirmDeleteBtn").onclick = () => {
+            if (db && pendingDelete.dateKey && pendingDelete.firebaseKey) {
+                db.ref(`leaveBookings2570/${pendingDelete.dateKey}/${pendingDelete.firebaseKey}`).remove()
+                    .then(() => {
+                        document.getElementById("deleteModal").classList.add("hidden");
+                        pendingDelete = { dateKey: null, firebaseKey: null };
+                    })
+                    .catch((error) => {
+                        alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
+                    });
+            }
+        };
+
+        // ปุ่มเปลี่ยนเดือน
+        document.getElementById("prevMonth").onclick = () => {
+            currentMonth = (currentMonth - 1 + 12) % 12;
+            renderCalendar(currentMonth);
+        };
+
+        document.getElementById("nextMonth").onclick = () => {
+            currentMonth = (currentMonth + 1) % 12;
+            renderCalendar(currentMonth);
+        };
+
+        document.getElementById("monthSelect").onchange = (e) => {
+            currentMonth = parseInt(e.target.value);
+            renderCalendar(currentMonth);
+        };
+    </script>
+</body>
+</html>
